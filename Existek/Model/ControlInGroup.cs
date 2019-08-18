@@ -50,5 +50,13 @@ namespace Existek.Model
             if (PropertyChanged != null)
                 PropertyChanged(this, new PropertyChangedEventArgs(prop));
         }
+
+        public ControlInGroup (GroupInTree parent, string name, string value)
+        {
+            _parent = parent;
+            this.name = name;
+            this.value = value;
+            SetName();
+        }
     }
 }

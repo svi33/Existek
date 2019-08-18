@@ -1,7 +1,11 @@
 ﻿using Existek.Model;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 
@@ -11,7 +15,7 @@ namespace Existek.ViewModel
     {
         private DirectoryInfoWrapper selectedFolder = null;
         private bool controling = false;
-
+       
         private RelayCommand addGroup;
         public RelayCommand AddGroup
         {
@@ -20,17 +24,18 @@ namespace Existek.ViewModel
                 return addGroup ??
                   (addGroup = new RelayCommand(obj =>
                   {
+                     
                       if (selectedFolder != null)
                       {
                           if (selectedFolder.Data is ControlInGroup) { return; }
                           DirectoryInfoWrapper _treeNodes = new DirectoryInfoWrapper(new GroupInTree());
                           _treeNodes.PropertyChanged += new PropertyChangedEventHandler(Start_PropertyChanged);
                           _treeNodes.Parent = selectedFolder;
-                          _treeNodes.Type=_treeNodes.Data.getRole();
+                          _treeNodes.Type = _treeNodes.Data.getRole();
                           selectedFolder.Children.Add(_treeNodes);
 
                       }
-                      else 
+                      else
                       {
                           DirectoryInfoWrapper Start = new DirectoryInfoWrapper(new GroupInTree());
                           Start.PropertyChanged += new PropertyChangedEventHandler(Start_PropertyChanged);
@@ -49,6 +54,7 @@ namespace Existek.ViewModel
                 return addControl ??
                   (addControl = new RelayCommand(obj =>
                   {
+                      MouseHook.Start();
                       Mouse.OverrideCursor = Cursors.Cross;
                       controling = true;
                   }));
@@ -65,6 +71,7 @@ namespace Existek.ViewModel
                   {
                       Mouse.OverrideCursor = null;
                       controling = false;
+                      MouseHook.stop();
                   }));
             }
         }
@@ -74,29 +81,47 @@ namespace Existek.ViewModel
         {
             get
             {
-
                 return mouseUpCommand ??
                   (mouseUpCommand = new RelayCommand(obj =>
                   {
                       if (controling)
                       {
-
+                          
                           if (selectedFolder != null)
                           {
                               GroupInTree Parent;
                               DirectoryInfoWrapper ParentFolder;
                               if (selectedFolder.Data is GroupInTree)
                               {
-                                  Parent=(GroupInTree)selectedFolder.Data;
+                                  Parent = (GroupInTree)selectedFolder.Data;
                                   ParentFolder = selectedFolder;
-                                  
+
                               }
                               else
                               {
-                                  Parent=(GroupInTree)selectedFolder.Parent.Data;
+                                  Parent = (GroupInTree)selectedFolder.Parent.Data;
                                   ParentFolder = selectedFolder.Parent;
                               }
-                              DirectoryInfoWrapper _treeNodes = new DirectoryInfoWrapper(new ControlInGroup(Parent,selectedFolder.Data));
+                              ;
+                              if (obj is dto)
+                              {
+                                  dto temp = (dto)obj;
+                                  if (temp.flag)
+                                  {
+                                      DirectoryInfoWrapper WinNodes = new DirectoryInfoWrapper(new ControlInGroup(Parent, temp.name, temp.value));
+                                      WinNodes.Type = WinNodes.Data.getRole();
+                                      WinNodes.PropertyChanged += new PropertyChangedEventHandler(Start_PropertyChanged);
+                                      WinNodes.Parent = ParentFolder;
+                                      ParentFolder.Children.Add(WinNodes);
+                                      temp.flag = false;
+                                      Mouse.OverrideCursor = null;
+                                      controling = false;
+                                      MouseHook.stop();
+                                      return;
+                                  }
+                              }
+
+                              DirectoryInfoWrapper _treeNodes = new DirectoryInfoWrapper(new ControlInGroup(Parent, selectedFolder.Data));
                               _treeNodes.Type = _treeNodes.Data.getRole();
                               _treeNodes.PropertyChanged += new PropertyChangedEventHandler(Start_PropertyChanged);
                               _treeNodes.Parent = ParentFolder;
@@ -104,6 +129,7 @@ namespace Existek.ViewModel
                           }
                           Mouse.OverrideCursor = null;
                           controling = false;
+                          MouseHook.stop();
                       }
                   }));
             }
@@ -185,14 +211,14 @@ namespace Existek.ViewModel
                 if (e.PropertyName == "IsSelected")
                 {
                     Files = wrapper.Data.children;
-                    
+
                 }
                 if (e.PropertyName == "IsExpanded")
                 {
-                    
+
                     foreach (var item in wrapper.Children)
                     {
-                        
+
                         CreateChildren(item);
 
                     }
@@ -224,5 +250,11 @@ namespace Existek.ViewModel
                 }
             }
         }
+
+
+
+        
+
+
     }
 }
