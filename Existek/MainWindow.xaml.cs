@@ -8,6 +8,8 @@ using Existek.Model;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows.Automation;
+using System.Windows.Automation.Text;
 
 namespace Existek
 {
@@ -49,20 +51,6 @@ namespace Existek
 
 
         bool found = false;
-        private dto GetProcessInfo(IntPtr hWnd)
-        {
-            uint processID = 0;
-            Process process = Process.GetProcessById((int)processID);
-
-            dto temp = new dto();
-            temp.name = process.MainWindowTitle;
-            temp.value = process.ProcessName;
-
-
-            return temp;
-
-        }
-
         bool mouseLBtnDown = false;
         bool mouseRBtnDown = false;
         private int getWindow = 0;
@@ -74,37 +62,38 @@ namespace Existek
             if (e.Message == MousePosArgs.MouseMessages.WM_LBUTTONDOWN)
             {
                 mouseLBtnDown = true;
-                found = false;
             }
             if (e.Message == MousePosArgs.MouseMessages.WM_LBUTTONUP)
             {
                 mouseLBtnDown = false;
-                dto temp = new dto();
-                IntPtr hwnd = WindowFromPoint(new POINT(e.X, e.Y));
-                w = "";
-                if (hwnd.ToInt64() > 0)
-                {
-                    w += " Caption: " + GetCaptionOfWindow(hwnd);
-                    w += " ClassName: " + GetClassNameOfWindow(hwnd);
-                    temp.name = GetClassNameOfWindow(hwnd);
-                    temp.value = GetCaptionOfWindow(hwnd);
-                    temp.flag = true;
-                }
-                if (temp.flag) MVM.MouseUpCommand.Execute(temp);
+               
                 found = true;
             }
             if (e.Message == MousePosArgs.MouseMessages.WM_RBUTTONDOWN)
             {
                 mouseRBtnDown = true;
-                found = true;
             }
             if (e.Message == MousePosArgs.MouseMessages.WM_RBUTTONUP)
             {
                 mouseRBtnDown = false;
-                found = true;
             }
 
-           
+            dto temp = new dto();
+            IntPtr hwnd = WindowFromPoint(new POINT(e.X, e.Y));
+            if (hwnd.ToInt64() > 0)
+            {
+                temp.name = GetCaptionOfWindow(hwnd); 
+                temp.value = GetCaptionOfWindow(hwnd);
+                temp.value = GetValueFromNativeElementFromPoint2((new Point(e.X, e.Y)));
+                temp.flag = true;
+            }
+            if (temp.flag&&found)
+            {
+                IntPtr windowHandle = new WindowInteropHelper(this).Handle;
+                if (hwnd == windowHandle) temp.flag = false;
+                MVM.MouseUpCommand.Execute(temp);
+                found = false;
+            }
         }
 
 
@@ -120,6 +109,7 @@ namespace Existek
 
                 if (!String.IsNullOrEmpty(windowText.ToString()) && !String.IsNullOrWhiteSpace(windowText.ToString()))
                     caption = windowText.ToString();
+                
             }
             catch (Exception ex)
             {
@@ -142,6 +132,7 @@ namespace Existek
                 classText = new StringBuilder("", (int)(cls_max_length + 5));
                 GetClassName(hwnd, classText, cls_max_length + 2);
 
+
                 if (!String.IsNullOrEmpty(classText.ToString()) && !String.IsNullOrWhiteSpace(classText.ToString()))
                     className = classText.ToString();
             }
@@ -163,6 +154,12 @@ namespace Existek
 
         }
 
+        public static string GetValueFromNativeElementFromPoint2(Point p)
+        {
+            AutomationElement element = AutomationElement.FromPoint(p);
+            string temp = element.Current.AutomationId.ToString();
+            return temp;
 
+        }
     }
 }
